@@ -18,7 +18,7 @@ jobs:
     # ✅ These env vars get baked into the Vue build (fixes "localhost:3030" in production)
     env:
       VUE_APP_ORDER_SERVICE_URL: https://order-service-app-a9htgzhpbugfe4h5.westus3-01.azurewebsites.net
-      VUE_APP_PRODUCT_SERVICE_URL: https://polite-stone-06c4e890f.6.azurestaticapps.net
+      VUE_APP_PRODUCT_SERVICE_URL: https://product-service-app-cucqgzg2fecegtbq.westus3-01.azurewebsites.net
 
     steps:
       - uses: actions/checkout@v3
@@ -51,4 +51,5 @@ jobs:
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_POLITE_STONE_06C4E890F }}
           action: "close"
+
 
