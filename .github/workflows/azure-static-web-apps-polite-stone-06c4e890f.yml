@@ -14,11 +14,18 @@ jobs:
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
     name: Build and Deploy Job
+
+    # ✅ These env vars get baked into the Vue build (fixes "localhost:3030" in production)
+    env:
+      VUE_APP_ORDER_SERVICE_URL: https://order-service-app-a9htgzhpbugfe4h5.westus3-01.azurewebsites.net/
+      VUE_APP_PRODUCT_SERVICE_URL: https://polite-stone-06c4e890f.6.azurestaticapps.net/
+
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: true
           lfs: false
+
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
