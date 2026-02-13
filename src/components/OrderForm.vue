@@ -26,7 +26,8 @@
           :value="product"
         />
         <label :for="product.id">
-          <strong>{{ product.name }}</strong> - ${{ product.price ? product.price.toFixed(2) : 'N/A' }}
+          <strong>{{ product.name }}</strong> -
+          ${{ product.price ? product.price.toFixed(2) : 'N/A' }}
         </label>
       </div>
 
@@ -41,7 +42,13 @@
         <h3>Total Price: ${{ totalPrice.toFixed(2) }}</h3>
       </div>
 
-      <button @click="submitOrder" :disabled="!selectedProduct || quantity <= 0" class="order-button">Place Order</button>
+      <button
+        @click="submitOrder"
+        :disabled="!selectedProduct || quantity <= 0"
+        class="order-button"
+      >
+        Place Order
+      </button>
     </div>
 
     <!-- Loading message if no products are fetched yet -->
@@ -57,58 +64,103 @@ export default {
     return {
       products: [],
       selectedProduct: null,
-      quantity: 1,  // Initialize quantity with a default value of 1
+      quantity: 1
     };
   },
+
   async created() {
     await this.fetchProducts();
   },
+
   computed: {
     totalPrice() {
       return this.selectedProduct ? this.selectedProduct.price * this.quantity : 0;
+    },
+
+    // Read env vars baked into the Vue build
+    productServiceBaseUrl() {
+      return (process.env.VUE_APP_PRODUCT_SERVICE_URL || "").trim();
+    },
+    orderServiceBaseUrl() {
+      return (process.env.VUE_APP_ORDER_SERVICE_URL || "").trim();
     }
   },
+
   methods: {
+    // Join base URL + path safely (handles trailing/leading slashes)
+    joinUrl(base, path) {
+      const b = (base || "").replace(/\/+$/, "");
+      const p = (path || "").replace(/^\/+/, "");
+      return `${b}/${p}`;
+    },
+
+    ensureConfig() {
+      if (!this.productServiceBaseUrl || !this.orderServiceBaseUrl) {
+        const msg =
+          "Missing API URLs. Ensure GitHub Actions sets:\n" +
+          "VUE_APP_PRODUCT_SERVICE_URL and VUE_APP_ORDER_SERVICE_URL";
+        console.error(msg, {
+          VUE_APP_PRODUCT_SERVICE_URL: this.productServiceBaseUrl,
+          VUE_APP_ORDER_SERVICE_URL: this.orderServiceBaseUrl
+        });
+        alert(msg);
+        return false;
+      }
+      return true;
+    },
+
     async fetchProducts() {
       try {
-        const response = await fetch('http://localhost:3030/products');
+        if (!this.ensureConfig()) return;
+
+        const url = this.joinUrl(this.productServiceBaseUrl, "/products");
+        const response = await fetch(url);
+
         if (response.ok) {
           this.products = await response.json();
         } else {
-          alert('Failed to fetch products.');
+          console.error("Failed to fetch products:", response.status, await response.text());
+          alert("Failed to fetch products.");
         }
       } catch (error) {
-        console.error('Error fetching products:', error);
-        alert('Failed to fetch products.');
+        console.error("Error fetching products:", error);
+        alert("Failed to fetch products.");
       }
     },
+
     async submitOrder() {
       if (!this.selectedProduct || this.quantity <= 0) {
-        alert('Please select a product and enter a valid quantity.');
+        alert("Please select a product and enter a valid quantity.");
         return;
       }
 
       try {
-        const response = await fetch('http://localhost:3000/orders', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+        if (!this.ensureConfig()) return;
+
+        const url = this.joinUrl(this.orderServiceBaseUrl, "/orders");
+
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             product: this.selectedProduct,
             quantity: this.quantity,
-            totalPrice: this.totalPrice,  // Send the total price as well
-          }),
+            totalPrice: this.totalPrice
+          })
         });
 
         if (!response.ok) {
+          console.error("Order failed:", response.status, await response.text());
           throw new Error(`Server error: ${response.status}`);
         }
 
-        alert(`Order for ${this.quantity} x ${this.selectedProduct.name} placed successfully! Total: $${this.totalPrice.toFixed(2)}`);
+        alert(
+          `Order for ${this.quantity} x ${this.selectedProduct.name} placed successfully! ` +
+          `Total: $${this.totalPrice.toFixed(2)}`
+        );
       } catch (error) {
-        console.error('Error placing order:', error);
-        alert('Failed to place order.');
+        console.error("Error placing order:", error);
+        alert("Failed to place order.");
       }
     }
   }
@@ -116,13 +168,12 @@ export default {
 </script>
 
 <style scoped>
-
 /* Container for the store */
 .store-container {
   max-width: 800px;
   margin: 0 auto;
   padding: 20px;
-  background-color: rgba(255, 255, 255, 0.9); /* Make the container semi-transparent */
+  background-color: rgba(255, 255, 255, 0.9);
   border-radius: 10px;
   box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
 }
